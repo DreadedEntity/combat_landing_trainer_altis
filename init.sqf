@@ -4,7 +4,18 @@
 #define setVar setVariable
 #define getVar getVariable
 #define nsMission missionNamespace
-player addAction ["View my stats", {}, nil, 6, false, true];
+player addAction ["View my stats", {
+	/*
+	Potential stats(per helicopter):
+		Number spawned
+		Time in flight
+		Successful landing
+		Catastrohpic damage (can't fly anymore but not destroyed)
+		Crashes
+		Soldiers transported
+		Soldiers killed
+	*/
+}, nil, 6, false, true];
 player addAction [
 	"Spawn Hummingbird",{
 		_heli = createVehicle ["B_Heli_Light_01_F", player modelToWorld [0,-500,0], [], 0, "FLY"];
@@ -72,26 +83,6 @@ _towns = [];
 {
 	_towns pushBack (configFile >> "CfgWorlds" >> "Altis" >> "Names" >> _x);
 } foreach ["AgiosDionysios","Athira","Chalkeia","Charkia","Kavala","Neochori","Paros","Pyrgos","Sofia","Zaros"];
-
-
-
-//Agios Dionysios
-//Athira
-//Chalkeia
-//Charkia
-//Kavala
-//Neochori
-//Paros
-//Pyrgos
-//Sofia
-//Zaros
-//configfile >> "CfgWorlds" >> "Altis" >> "Names" >> "Zaros"
-	//angle
-	//name
-	//position[]
-	//radiusA
-	//radiusB
-	//type
 	
 player setPosATL [14648.7,16748.9,0];
 player setDir 326.641;
