@@ -4,7 +4,7 @@
 #define setVar setVariable
 #define getVar getVariable
 #define nsMission missionNamespace
-player addAction ["View my stats", {}, nil, 1, false, true];
+player addAction ["View my stats", {}, nil, 6, false, true];
 player addAction [
 	"Spawn Hummingbird",{
 		_heli = createVehicle ["B_Heli_Light_01_F", player modelToWorld [0,-500,0], [], 0, "FLY"];
@@ -29,6 +29,7 @@ createWithRotation = {
 	private ["_prop","_pos"];
 	_pos = S(_this, 1);
 	_prop = createVehicle [S(_this, 0), _pos, [], 0, "CAN_COLLIDE"];
+	_prop allowDamage false;
 	_prop enableSimulation false;
 	_prop setVectorUp [0,0,1];
 	_prop setDir S(_this, 2);
@@ -149,7 +150,7 @@ lSelect = {
 	_output;
 };
 goButtonCode = {
-	private ["_array","_selectedSIde","_selected","_centerObject","_laptop"];
+	private ["_array","_selectedSIde","_selected","_centerObject","_laptop","_vehicle"];
 	_array = [S(S(_this, 3), 0), missionNamespace getVariable ["SELECTED_TOWN",""], "name"] call getConfigFromArray;
 	_selectedSide = switch (missionNamespace getVariable ["SELECTED_SIDE",""]) do {
 		case "WEST": { 0 };
@@ -160,7 +161,12 @@ goButtonCode = {
 	_selected = [_this, 3, 1, S(_array, 0), _selectedSide] call lSelect;
 	_centerObject = [[S(_selected, 0),S(_selected, 1),S(_selected, 2)], S(_selected, 3), S(S(_this, 3), 2)] call rebuildComposition;
 	_laptop = [_centerObject, S(S(_this, 3),3)] call addToComposition;
-	_laptop addAction ["Buy Heli", {}];
+	{
+		_laptop addAction [format ["Create %1", getText (configFile >> "CfgVehicles" >> _x >> "displayName")], {
+			_vehicle = createVehicle [S(_this, 3), S(_this, 0) modelToWorld [5,5,0]];
+			player setDir (player getDir _vehicle);
+		}, _x, 1, false, true];
+	} foreach ["B_Heli_Transport_03_unarmed_F","B_Heli_Light_01_F","B_Heli_Transport_01_F","O_Heli_Transport_04_bench_F","O_Heli_Light_02_unarmed_F","I_Heli_Transport_02_F","I_Heli_light_03_unarmed_F"];
 	
 	player setPosATL ((getPosATL _centerObject) vectorAdd [0,0,0.9]);
 	missionNamespace setVariable ["PLAYER_HAS_TELEPORTED", true];
