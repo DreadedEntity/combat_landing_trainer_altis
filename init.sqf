@@ -58,57 +58,8 @@ rebuildComposition = {
 	_prop;
 };
 addToComposition = {
-
 	[S(S(_this, 1), 0), S(_this,0) modelToWorld S(S(_this, 1), 1), (getDir S(_this,0)) + S(S(_this, 1), 2)] call createWithRotation;
 };
-_propList = [
-	["Land_i_Addon_03mid_V1_F", [0,0,0], 0],
-	["Land_i_Addon_03_V1_F", [-0.01,-7.411,-0.909], 0],
-	["Land_i_Addon_04_V1_F", [-0.01,7.162,-0.909], 180],
-	["Land_CampingTable_F", [3.5,9,-0.0124245], 0],
-	["MapBoard_altis_F", [-1,9,-0.0121918], 330]
-];
-_laptop = ["Land_Laptop_03_black_F", [3.5,9,0.801048], 0];
-
-//main = [[13671,15027,0], 30, _propList] call rebuildComposition;
-
-
-_pos = getPosASL main;
-removeAllWeapons player;
-player allowDamage false;
-//player setPosASL [S(_pos, 0), S(_pos, 1), S(_pos, 2) + .9];
-//player setDir direction gardenMiddle;
-
-_towns = [];
-{
-	_towns pushBack (configFile >> "CfgWorlds" >> "Altis" >> "Names" >> _x);
-} foreach ["AgiosDionysios","Athira","Chalkeia","Charkia","Kavala","Neochori","Paros","Pyrgos","Sofia","Zaros"];
-	
-player setPosATL [14648.7,16748.9,0];
-player setDir 326.641;
-	
-_spawnList = [
-	[[10416.3,17493.5,1,0],[9548.99,14088.4,0,0],[6589.63,15906.5,0,0]], //AgiosDionysios
-	[[13633.5,19999,0,72],[12644.2,17442.6,0,0],[15342.9,18520.1,0,0]], //Athira
-	[[21167.1,11083.6,0,0],[21026.8,13156.1,0,0],[18966.8,10998.3,0,0]], //Chalkeia
-	[[17539.1,14275.3,0,0],[17542.2,16125.1,0,0],[19727.6,15089.2,0,0]], //Charkia
-	[[6200.38,12769.9,0,0],[4360.08,14919,0,0],[3716.31,10732.8,0,0]], //Kavala
-	[[11311.3,15324.8,0,208],[11666.1,12818,0,303],[13663.8,15014.3,0,0]],//Neochori
-	[[22343.7,16634.1,0,0],[21013.1,18124.2,0,0],[19847.5,15891.9,0,0]], //Paros
-	[[18138.7,11691.3,0,0],[17380.9,13743.1,0,0],[16062.5,11425.1,0,0]], //Pyrgos
-	[[23748.7,21883.9,0,0],[25970.9,20004.5,0,0],[26733.5,22749.6,0,0]], //Sofia
-	[[8956.45,10608.2,0,0],[9977.78,12747,0,0],[7506.09,12200.9,0,0]] //Zaros
-];
-spawnGuy allowDamage false;
-removeBackpack spawnGuy;
-spawnGuy addAction [
-	"Reset Selection", {
-		missionNamespace setVariable ["SELECTED_TOWN", ""];
-		missionNamespace setVariable ["SELECTED_SIDE", ""];
-	},_currentName,1,false,true,"",
-	"(missionNamespace getVariable ['SELECTED_TOWN','']) != ''"
-];
-
 getConfigFromArray = {
 	private ["_selectedTown","_config"];
 	_selectedTown = 0;
@@ -164,6 +115,51 @@ goButtonCode = {
 	
 	[getArray (S(_array, 1) >> "position"),[getNumber (S(_array, 1) >> "radiusA"),getNumber (S(_array, 1) >> "radiusA")]] call setMarker;
 };
+mainScript = {
+};
+_spawnList = [
+	[[10416.3,17493.5,1,0],[9548.99,14088.4,0,0],[6589.63,15906.5,0,0]], //AgiosDionysios
+	[[13633.5,19999,0,72],[12644.2,17442.6,0,0],[15342.9,18520.1,0,0]], //Athira
+	[[21167.1,11083.6,0,0],[21026.8,13156.1,0,0],[18966.8,10998.3,0,0]], //Chalkeia
+	[[17539.1,14275.3,0,0],[17542.2,16125.1,0,0],[19727.6,15089.2,0,0]], //Charkia
+	[[6200.38,12769.9,0,0],[4360.08,14919,0,0],[3716.31,10732.8,0,0]], //Kavala
+	[[11311.3,15324.8,0,208],[11666.1,12818,0,303],[13663.8,15014.3,0,0]],//Neochori
+	[[22343.7,16634.1,0,0],[21013.1,18124.2,0,0],[19847.5,15891.9,0,0]], //Paros
+	[[18138.7,11691.3,0,0],[17380.9,13743.1,0,0],[16062.5,11425.1,0,0]], //Pyrgos
+	[[23748.7,21883.9,0,0],[25970.9,20004.5,0,0],[26733.5,22749.6,0,0]], //Sofia
+	[[8956.45,10608.2,0,0],[9977.78,12747,0,0],[7506.09,12200.9,0,0]] //Zaros
+];
+_propList = [
+	["Land_i_Addon_03mid_V1_F", [0,0,0], 0],
+	["Land_i_Addon_03_V1_F", [-0.01,-7.411,-0.909], 0],
+	["Land_i_Addon_04_V1_F", [-0.01,7.162,-0.909], 180],
+	["Land_CampingTable_F", [3.5,9,-0.0124245], 0],
+	["MapBoard_altis_F", [-1,9,-0.0121918], 330]
+];
+_laptop = ["Land_Laptop_03_black_F", [3.5,9,0.801048], 0];
+
+//main = [[13671,15027,0], 30, _propList] call rebuildComposition;
+
+removeAllWeapons player;
+player allowDamage false;
+
+_towns = [];
+{
+	_towns pushBack (configFile >> "CfgWorlds" >> "Altis" >> "Names" >> _x);
+} foreach ["AgiosDionysios","Athira","Chalkeia","Charkia","Kavala","Neochori","Paros","Pyrgos","Sofia","Zaros"];
+	
+player setPosATL [14648.7,16748.9,0];
+player setDir 326.641;
+
+spawnGuy allowDamage false;
+removeBackpack spawnGuy;
+spawnGuy addAction [
+	"Reset Selection", {
+		missionNamespace setVariable ["SELECTED_TOWN", ""];
+		missionNamespace setVariable ["SELECTED_SIDE", ""];
+	},_currentName,1,false,true,"",
+	"(missionNamespace getVariable ['SELECTED_TOWN','']) != ''"
+];
 
 spawnGuy addAction [ "<t color='#00FF00'>GO</t>", goButtonCode, [_towns,_spawnList, _propList, _laptop], 6, false, true, "", "(missionNamespace getVariable ['SELECTED_TOWN','']) != '' && {(missionNamespace getVariable ['SELECTED_SIDE','']) != ''}"];
 	
@@ -184,4 +180,4 @@ spawnGuy addAction [ "<t color='#00FF00'>GO</t>", goButtonCode, [_towns,_spawnLi
 	];
 } foreach ["WEST","EAST","GUER"];
 
-execVM "DE_diagnostic.sqf";
+//execVM "DE_diagnostic.sqf";
