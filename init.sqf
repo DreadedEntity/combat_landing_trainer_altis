@@ -107,6 +107,7 @@ goButtonCode = {
 	{
 		_laptop addAction [format ["Create %1", getText (configFile >> "CfgVehicles" >> _x >> "displayName")], {
 			_vehicle = createVehicle [S(_this, 3), S(_this, 0) modelToWorld [10,10,0]];
+			missionNamespace setVar ["PLAYER_VEHICLE", _vehicle];
 			player setDir (player getDir _vehicle);
 			MISSION_PROGRESS = 1;
 		}, _x, 1, false, true];
@@ -149,31 +150,67 @@ progressEvaluator = {
 	//TODO: move progression conditions here and make message a global string variable
 	while {true} do {
 		switch (missionNamespace getVar ["MISSION_PROGRESS",0]) do {
-			case 0: { hintSilent "Spawn a chopper from the laptop"; };
-			case 1: { hintSilent "Get in your heli"; };
-			case 2: { hintSilent "Wait for soldiers to get in and leave whenever you like"; };
-			case 3: { hintSilent "Fly to the waypoint and land"; };
-			case 4: { hintSilent "Fly back to spawn point and land"; };
+			case 0: {
+				hintSilent "Spawn a chopper from the laptop";
+			};
+			case 1: {
+				hintSilent "Get in your heli";
+			};
+			case 2: {
+				hintSilent "Wait for soldiers to get in and leave whenever you like";
+			};
+			case 3: {
+				hintSilent "Fly to the waypoint and land";
+			};
+			case 4: {
+				hintSilent "Fly back to spawn point and land";
+			};
 		};
 		sleep 1;
 	};
 };
 soldierSpawner = {
-	_initial = 4 + floor(random 5);
+	_initial = 2 + floor(random 7);
 	_progress = missionNamespace getVar ["MISSION_PROGRESS",0];
 	soldiers = [];
 	for "_i" from 0 to _initial do {
-		soldiers pushBack createVehicle ["B_Soldier_F", (getPosATL _this) vectorAdd [0,0,0.9], [], 3, "NONE"];
+		_newUnit = (createGroup west) createUnit ["B_Soldier_F", (getPosATL _this) vectorAdd [0,0,0.9], [], 3, "NONE"];
+		_newUnit doMove (_this call getNewSpawnPos);
+		soldiers pushBack _newUnit;
 	};
+	_this spawn soldierSimulator;
 	while {true} do {
 		//TODO: something
 	}
 };
 soldierSimulator = {
-
+	while {true} do {
+		while {!(missionNamespace getVar ["CHOPPER_NEAR", false])} do {
+			{
+				if (speed _x < 1) then {
+					_x doMove (_this call getNewSpawnPos);
+				};
+			} foreach soldiers;
+			sleep 1;
+		};
+		{
+			//_wp = (group _x) addWaypoint [vehicle player, 0];
+			//_wp setWaypointSpeed "FULL";
+			//_wp setWaypointType "GETIN";
+			(group _x) addVehicle PLAYER_VEHICLE;
+			_x assignAsCargo PLAYER_VEHICLE;
+		} foreach soldiers;
+		soldiers orderGetIn true;
+		waitUntil {MISSION_PROGRESS > 2};
+	};
+};
+getNewSpawnPos = {
+	private _pos = _this getPos [random 10, random 360];
+	_pos set [2, ((getPosATL _this) select 2) + 0.9];
+	_pos;
 };
 _spawnList = [
-	[[10416.3,17493.5,1,0],[9548.99,14088.4,0,0],[6589.63,15906.5,0,0]], //AgiosDionysios
+	[[10416.3,17493.5,0.5,0],[9548.99,14088.4,0,0],[6589.63,15906.5,0,0]], //AgiosDionysios
 	[[13633.5,19999,0,72],[12644.2,17442.6,0,0],[15342.9,18520.1,0,0]], //Athira
 	[[21167.1,11083.6,0,0],[21026.8,13156.1,0,0],[18966.8,10998.3,0,0]], //Chalkeia
 	[[17539.1,14275.3,0,0],[17542.2,16125.1,0,0],[19727.6,15089.2,0,0]], //Charkia
