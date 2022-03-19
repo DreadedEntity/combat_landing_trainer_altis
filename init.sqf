@@ -4,6 +4,7 @@
 #define setVar setVariable
 #define getVar getVariable
 #define nsMission missionNamespace
+
 player addAction ["View my stats", {
 	/*
 	Potential stats(per helicopter):
@@ -105,8 +106,9 @@ goButtonCode = {
 	_laptop = [_centerObject, S(S(_this, 3),3)] call addToComposition;
 	{
 		_laptop addAction [format ["Create %1", getText (configFile >> "CfgVehicles" >> _x >> "displayName")], {
-			_vehicle = createVehicle [S(_this, 3), S(_this, 0) modelToWorld [5,5,0]];
+			_vehicle = createVehicle [S(_this, 3), S(_this, 0) modelToWorld [10,10,0]];
 			player setDir (player getDir _vehicle);
+			MISSION_PROGRESS = 1;
 		}, _x, 1, false, true];
 	} foreach ["B_Heli_Transport_03_unarmed_F","B_Heli_Light_01_F","B_Heli_Transport_01_F","O_Heli_Transport_04_bench_F","O_Heli_Light_02_unarmed_F","I_Heli_Transport_02_F","I_Heli_light_03_unarmed_F"];
 	
@@ -114,8 +116,61 @@ goButtonCode = {
 	missionNamespace setVariable ["PLAYER_HAS_TELEPORTED", true];
 	
 	[getArray (S(_array, 1) >> "position"),[getNumber (S(_array, 1) >> "radiusA"),getNumber (S(_array, 1) >> "radiusA")]] call setMarker;
+	_centerObject spawn soldierSpawner;
+	[] spawn mainScript;
+	[] spawn progressEvaluator;
 };
 mainScript = {
+	//TODO: get progression conditions out of here
+	MISSION_PROGRESS = missionNamespace getVar ["MISSION_PROGRESS",0];
+	//Get a chopper
+	
+	waitUntil {MISSION_PROGRESS == 1};
+	//Get in chopper
+	
+	
+	sleep 1;
+	MISSION_PROGRESS = 2;
+	//Wait for people to get in
+	
+	while {true} do {
+		waitUntil {((getPosATL player) select 2) > 10};
+		MISSION_PROGRESS = 3;
+		waitUntil {MISSION_PROGRESS == 3};
+		//Land at AO (calculate score)
+		
+		waitUntil {((getPosATL player) select 2) < 2};
+		MISSION_PROGRESS = 4;
+		waitUntil {MISSION_PROGRESS == 4};
+		//Land back at spawn 
+	}
+};
+progressEvaluator = {
+	//TODO: move progression conditions here and make message a global string variable
+	while {true} do {
+		switch (missionNamespace getVar ["MISSION_PROGRESS",0]) do {
+			case 0: { hintSilent "Spawn a chopper from the laptop"; };
+			case 1: { hintSilent "Get in your heli"; };
+			case 2: { hintSilent "Wait for soldiers to get in and leave whenever you like"; };
+			case 3: { hintSilent "Fly to the waypoint and land"; };
+			case 4: { hintSilent "Fly back to spawn point and land"; };
+		};
+		sleep 1;
+	};
+};
+soldierSpawner = {
+	_initial = 4 + floor(random 5);
+	_progress = missionNamespace getVar ["MISSION_PROGRESS",0];
+	soldiers = [];
+	for "_i" from 0 to _initial do {
+		soldiers pushBack createVehicle ["B_Soldier_F", (getPosATL _this) vectorAdd [0,0,0.9], [], 3, "NONE"];
+	};
+	while {true} do {
+		//TODO: something
+	}
+};
+soldierSimulator = {
+
 };
 _spawnList = [
 	[[10416.3,17493.5,1,0],[9548.99,14088.4,0,0],[6589.63,15906.5,0,0]], //AgiosDionysios
