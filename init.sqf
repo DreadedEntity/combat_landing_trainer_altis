@@ -5,6 +5,36 @@
 #define getVar getVariable
 #define nsMission missionNamespace
 
+//player addAction ["Run Test", {
+//	_vehicle = vehicle player;
+//	_startTime = time;
+//	for "_i" from 0 to 1000000 do {
+//		_vehicle emptyPositions "cargo";
+//	};
+//	_endTime = time;
+//	systemChat format ["emptyPositions: %1", _endTime - _startTime];
+//	_startTime = time;
+//	for "_i" from 0 to 1000000 do {
+//		fullCrew [_vehicle, "cargo", true];
+//	};
+//	_endTime = time;
+//	systemChat format ["fullCrew(true): %1", _endTime - _startTime];
+//	_startTime = time;
+//	for "_i" from 0 to 1000000 do {
+//		fullCrew [_vehicle, "cargo", false];
+//	};
+//	_endTime = time;
+//	systemChat format ["fullCrew(false): %1", _endTime - _startTime];
+//}];
+//
+//ra1 addAction [ "On" , {
+//	_globalSoundSource = missionNamespace getVariable ["CURRENT_SOUND", objNull]; 
+//	if (!(_globalSoundSource isEqualTo objNull)) then { 
+//		deleteVehicle _globalSoundSource; 
+//	}; 
+//	[ra1, "Audioger", 50, 1] remoteExec ["playSoundGlobal", [0, -2] select isDedicated];
+//}];
+
 player addAction ["View my stats", {
 	/*
 	Potential stats(per helicopter):
@@ -33,7 +63,12 @@ player addAction ["Fix Heli",{
 player addAction ["Change practice area", {
 	player setPosATL [14648.7,16748.9,0]; 
 	player setDir 326.641;
-	nsMission setVar ["PLAYER_HAS_TELEPORTED", false];
+	hintSilent "";
+	MISSION_PROGRESS = 0;
+	PLAYER_HAS_TELEPORTED = false;
+	deleteVehicle (missionNamespace getVar ["PLAYER_VEHICLE", objNull]);
+	SCRIPTS apply {terminate _x;};
+	Soldiers apply {deleteVehicle _x;};
 }, nil, 1, false, true, "", "missionNamespace getVariable ['PLAYER_HAS_TELEPORTED', false]"];
 
 
@@ -103,11 +138,15 @@ goButtonCode = {
 	
 	_selected = [_this, 3, 1, S(_array, 0), _selectedSide] call lSelect;
 	_centerObject = [[S(_selected, 0),S(_selected, 1),S(_selected, 2)], S(_selected, 3), S(S(_this, 3), 2)] call rebuildComposition;
+	SPAWNPOINT = _centerObject;
 	_laptop = [_centerObject, S(S(_this, 3),3)] call addToComposition;
 	{
 		_laptop addAction [format ["Create %1", getText (configFile >> "CfgVehicles" >> _x >> "displayName")], {
+			deleteVehicle (missionNamespace getVar ["PLAYER_VEHICLE", objNull]);
 			_vehicle = createVehicle [S(_this, 3), S(_this, 0) modelToWorld [10,10,0]];
-			missionNamespace setVar ["PLAYER_VEHICLE", _vehicle];
+			_pos = getPos _vehicle;
+			_vehicle setPos [_pos select 0, _pos select 1, 0];
+			PLAYER_VEHICLE = _vehicle;
 			player setDir (player getDir _vehicle);
 			MISSION_PROGRESS = 1;
 		}, _x, 1, false, true];
@@ -116,10 +155,12 @@ goButtonCode = {
 	player setPosATL ((getPosATL _centerObject) vectorAdd [0,0,0.9]);
 	missionNamespace setVariable ["PLAYER_HAS_TELEPORTED", true];
 	
-	[getArray (S(_array, 1) >> "position"),[getNumber (S(_array, 1) >> "radiusA"),getNumber (S(_array, 1) >> "radiusA")]] call setMarker;
-	_centerObject spawn soldierSpawner;
-	[] spawn mainScript;
-	[] spawn progressEvaluator;
+	[getArray (S(_array, 1) >> "position"),[getNumber (S(_array, 1) >> "radiusA"),getNumber (S(_array, 1) >> "radiusB")]] call setMarker;
+	OBJECTIVE = getArray (S(_array, 1) >> "position");
+	SCRIPTS = [];
+	SCRIPTS pushBack (_centerObject spawn soldierSpawner);
+	SCRIPTS pushBack ([] spawn mainScript);
+	SCRIPTS pushBack ([] spawn progressEvaluator);
 };
 mainScript = {
 	//TODO: get progression conditions out of here
@@ -130,42 +171,77 @@ mainScript = {
 	//Get in chopper
 	
 	
-	sleep 1;
-	MISSION_PROGRESS = 2;
+	//sleep 1;
+	waitUntil {MISSION_PROGRESS == 2};
 	//Wait for people to get in
 	
 	while {true} do {
-		waitUntil {((getPosATL player) select 2) > 10};
-		MISSION_PROGRESS = 3;
 		waitUntil {MISSION_PROGRESS == 3};
-		//Land at AO (calculate score)
-		
-		waitUntil {((getPosATL player) select 2) < 2};
-		MISSION_PROGRESS = 4;
+	
 		waitUntil {MISSION_PROGRESS == 4};
-		//Land back at spawn 
+		
+		//Land at AO (calculate score)
+		waitUntil {((getPosATL player) select 2) < 2};
+		soldiers allowGetIn false;
+		soldiers apply { moveOut _x; };
+		
+		waitUntil {MISSION_PROGRESS == 5};
 	}
 };
+
+//PLAYER_VEHICLE = vehicle player;
+//CHOPPER_NEAR = true;
+//soldiers allowGetIn false;
+//{
+// moveOut _x;
+//} foreach soldiers;
+
+//[] spawn {
+//	while {true} do {
+//		if (vehicle player != player) then {
+//			hintSilent str (fullCrew [vehicle player,"cargo", missionNamespace getVar ["DEBUG",true]] + fullCrew [vehicle player,"turret", missionNamespace getVar ["DEBUG",true]]);
+//		};
+//	};
+//};
+
+
 progressEvaluator = {
 	//TODO: move progression conditions here and make message a global string variable
+	private _progressMessage = "";
 	while {true} do {
 		switch (missionNamespace getVar ["MISSION_PROGRESS",0]) do {
 			case 0: {
-				hintSilent "Spawn a chopper from the laptop";
+				_progressMessage = "Spawn a chopper from the laptop";
 			};
 			case 1: {
-				hintSilent "Get in your heli";
+				_progressMessage = "1. Get in your heli";
+				if (PLAYER_VEHICLE isEqualTo objNull) then { MISSION_PROGRESS = 0; };
+				if (vehicle player != player) then { MISSION_PROGRESS = 2; };
 			};
 			case 2: {
-				hintSilent "Wait for soldiers to get in and leave whenever you like";
+				_progressMessage = "2. Wait for soldiers to get in";
+				if (vehicle player == player) then { MISSION_PROGRESS = 1; };
+				if (count (fullCrew PLAYER_VEHICLE) > 1) then { MISSION_PROGRESS = 3; };
+				if (PLAYER_VEHICLE distance SPAWNPOINT < 100) then { CHOPPER_NEAR = true; };
 			};
 			case 3: {
-				hintSilent "Fly to the waypoint and land";
+				_progressMessage = "3. Takeoff and fly to the AO";
+				if (vehicle player == player) then { MISSION_PROGRESS = 1; };
+				if (PLAYER_VEHICLE distance SPAWNPOINT < 100) then { CHOPPER_NEAR = true; } else { CHOPPER_NEAR = false; };
+				if (PLAYER_VEHICLE distance OBJECTIVE < 200) then { MISSION_PROGRESS = 4; };
 			};
 			case 4: {
-				hintSilent "Fly back to spawn point and land";
+				_progressMessage = "4. Fly to the waypoint and land";
+				if (vehicle player == player) then { MISSION_PROGRESS = 1; };
+				if (count (fullCrew PLAYER_VEHICLE) == 1) then { MISSION_PROGRESS = 5; };
+			};
+			case 5: {
+				_progressMessage = "5. Fly back to spawn point and land";
+				if (vehicle player == player) then { MISSION_PROGRESS = 1; };
+				if (PLAYER_VEHICLE distance SPAWNPOINT < 100) then { MISSION_PROGRESS = 2; };
 			};
 		};
+		hintSilent _progressMessage;
 		sleep 1;
 	};
 };
@@ -201,7 +277,7 @@ soldierSimulator = {
 			_x assignAsCargo PLAYER_VEHICLE;
 		} foreach soldiers;
 		soldiers orderGetIn true;
-		waitUntil {MISSION_PROGRESS > 2};
+		waitUntil {MISSION_PROGRESS > 1};
 	};
 };
 getNewSpawnPos = {
@@ -224,7 +300,7 @@ _spawnList = [
 _propList = [
 	["Land_i_Addon_03mid_V1_F", [0,0,0], 0],
 	["Land_i_Addon_03_V1_F", [-0.01,-7.411,-0.909], 0],
-	["Land_i_Addon_04_V1_F", [-0.01,7.162,-0.909], 180],
+	["Land_i_Addon_04_V1_F", [-0.01,6.662,-0.909], 180],
 	["Land_CampingTable_F", [3.5,9,-0.0124245], 0],
 	["MapBoard_altis_F", [-1,9,-0.0121918], 330]
 ];
