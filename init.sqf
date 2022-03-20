@@ -35,6 +35,7 @@
 //	[ra1, "Audioger", 50, 1] remoteExec ["playSoundGlobal", [0, -2] select isDedicated];
 //}];
 
+player addRating 9001;
 player addAction ["View my stats", {
 	/*
 	Potential stats(per helicopter):
@@ -69,6 +70,7 @@ player addAction ["Change practice area", {
 	deleteVehicle (missionNamespace getVar ["PLAYER_VEHICLE", objNull]);
 	SCRIPTS apply {terminate _x;};
 	Soldiers apply {deleteVehicle _x;};
+	PLAYER_CARGO = [];
 }, nil, 1, false, true, "", "missionNamespace getVariable ['PLAYER_HAS_TELEPORTED', false]"];
 
 
@@ -157,6 +159,7 @@ goButtonCode = {
 	
 	[getArray (S(_array, 1) >> "position"),[getNumber (S(_array, 1) >> "radiusA"),getNumber (S(_array, 1) >> "radiusB")]] call setMarker;
 	OBJECTIVE = getArray (S(_array, 1) >> "position");
+	PLAYER_CARGO = [];
 	SCRIPTS = [];
 	SCRIPTS pushBack (_centerObject spawn soldierSpawner);
 	SCRIPTS pushBack ([] spawn mainScript);
@@ -204,6 +207,11 @@ mainScript = {
 //	};
 //};
 
+[] spawn {
+	while {true} do {
+		hintSilent str (missionNamespace getVariable ["PLAYER_CARGO", []]);
+	}
+};
 
 progressEvaluator = {
 	//TODO: move progression conditions here and make message a global string variable
@@ -257,8 +265,18 @@ soldierSpawner = {
 	_this spawn soldierSimulator;
 	while {true} do {
 		//TODO: something
+		if (!(missionNamespace getVar ["PLAYER_VEHICLE", objNull] isEqualTo objNull) && {count soldiers < (count (fullCrew [PLAYER_VEHICLE, "", true])) - 1}) then {
+			_newUnit = (createGroup west) createUnit ["B_Soldier_F", (getPosATL _this) vectorAdd [0,0,0.9], [], 3, "NONE"];
+			_newUnit doMove (_this call getNewSpawnPos);
+			soldiers pushBack _newUnit;
+		};
+		sleep (random 5);
 	}
 };
+
+//PLAYER_VEHICLE setPos (PLAYER_VEHICLE modelToWorldVisual [0,0,2000]);
+//(vehicle player) setDammage 0;
+
 soldierSimulator = {
 	while {true} do {
 		while {!(missionNamespace getVar ["CHOPPER_NEAR", false])} do {
@@ -267,6 +285,8 @@ soldierSimulator = {
 					_x doMove (_this call getNewSpawnPos);
 				};
 			} foreach soldiers;
+			(missionNamespace getVariable ["PLAYER_CARGO", []]) apply { doGetOut _x };
+			soldiers orderGetIn false;
 			sleep 1;
 		};
 		{
@@ -277,7 +297,16 @@ soldierSimulator = {
 			_x assignAsCargo PLAYER_VEHICLE;
 		} foreach soldiers;
 		soldiers orderGetIn true;
-		waitUntil {MISSION_PROGRESS > 1};
+		while {missionNamespace getVar ["CHOPPER_NEAR", false]} do {
+			{
+				if (vehicle _x isEqualTo (missionNamespace getVar ["PLAYER_VEHICLE", objNull])) then {
+					PLAYER_CARGO pushBack _x;
+				};
+			} foreach soldiers;
+			{
+				soldiers deleteAt (soldiers find _x);
+			} foreach PLAYER_CARGO;
+		};
 	};
 };
 getNewSpawnPos = {
@@ -301,10 +330,10 @@ _propList = [
 	["Land_i_Addon_03mid_V1_F", [0,0,0], 0],
 	["Land_i_Addon_03_V1_F", [-0.01,-7.411,-0.909], 0],
 	["Land_i_Addon_04_V1_F", [-0.01,6.662,-0.909], 180],
-	["Land_CampingTable_F", [3.5,9,-0.0124245], 0],
-	["MapBoard_altis_F", [-1,9,-0.0121918], 330]
+	["Land_CampingTable_F", [3.5,8.5,-0.0124245], 0],
+	["MapBoard_altis_F", [-1,8.5,-0.0121918], 330]
 ];
-_laptop = ["Land_Laptop_03_black_F", [3.5,9,0.801048], 0];
+_laptop = ["Land_Laptop_03_black_F", [3.5,8.5,0.801048], 0];
 
 //main = [[13671,15027,0], 30, _propList] call rebuildComposition;
 
