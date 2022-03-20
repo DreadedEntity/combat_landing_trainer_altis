@@ -145,12 +145,14 @@ goButtonCode = {
 	{
 		_laptop addAction [format ["Create %1", getText (configFile >> "CfgVehicles" >> _x >> "displayName")], {
 			deleteVehicle (missionNamespace getVar ["PLAYER_VEHICLE", objNull]);
-			_vehicle = createVehicle [S(_this, 3), S(_this, 0) modelToWorld [10,10,0]];
+			_vehicle = createVehicle [S(_this, 3), S(_this, 0) modelToWorld [10,10,0], [], 0];
 			_pos = getPos _vehicle;
 			_vehicle setPos [_pos select 0, _pos select 1, 0];
 			PLAYER_VEHICLE = _vehicle;
 			player setDir (player getDir _vehicle);
 			MISSION_PROGRESS = 1;
+			soldiers = (missionNamespace getVariable ["PLAYER_CARGO", []]) + (missionNamespace getVariable ["soldiers", []]);
+			PLAYER_CARGO = [];
 		}, _x, 1, false, true];
 	} foreach ["B_Heli_Transport_03_unarmed_F","B_Heli_Light_01_F","B_Heli_Transport_01_F","O_Heli_Transport_04_bench_F","O_Heli_Light_02_unarmed_F","I_Heli_Transport_02_F","I_Heli_light_03_unarmed_F"];
 	
@@ -162,56 +164,41 @@ goButtonCode = {
 	PLAYER_CARGO = [];
 	SCRIPTS = [];
 	SCRIPTS pushBack (_centerObject spawn soldierSpawner);
-	SCRIPTS pushBack ([] spawn mainScript);
+	//SCRIPTS pushBack ([] spawn mainScript);
 	SCRIPTS pushBack ([] spawn progressEvaluator);
 };
-mainScript = {
-	//TODO: get progression conditions out of here
-	MISSION_PROGRESS = missionNamespace getVar ["MISSION_PROGRESS",0];
-	//Get a chopper
-	
-	waitUntil {MISSION_PROGRESS == 1};
-	//Get in chopper
-	
-	
-	//sleep 1;
-	waitUntil {MISSION_PROGRESS == 2};
-	//Wait for people to get in
-	
-	while {true} do {
-		waitUntil {MISSION_PROGRESS == 3};
-	
-		waitUntil {MISSION_PROGRESS == 4};
-		
-		//Land at AO (calculate score)
-		waitUntil {((getPosATL player) select 2) < 2};
-		soldiers allowGetIn false;
-		soldiers apply { moveOut _x; };
-		
-		waitUntil {MISSION_PROGRESS == 5};
-	}
-};
-
-//PLAYER_VEHICLE = vehicle player;
-//CHOPPER_NEAR = true;
-//soldiers allowGetIn false;
-//{
-// moveOut _x;
-//} foreach soldiers;
+//mainScript = {
+//	//TODO: get progression conditions out of here
+//	MISSION_PROGRESS = missionNamespace getVar ["MISSION_PROGRESS",0];
+//	//Get a chopper
+//	
+//	waitUntil {MISSION_PROGRESS == 1};
+//	//Get in chopper
+//	
+//	
+//	//sleep 1;
+//	waitUntil {MISSION_PROGRESS == 2};
+//	//Wait for people to get in
+//	
+//	while {true} do {
+//		waitUntil {MISSION_PROGRESS == 3};
+//	
+//		waitUntil {MISSION_PROGRESS == 4};
+//		
+//		//Land at AO (calculate score)
+//		waitUntil {((getPosATL player) select 2) < 2};
+//		soldiers allowGetIn false;
+//		soldiers apply { moveOut _x; };
+//		
+//		waitUntil {MISSION_PROGRESS == 5};
+//	}
+//};
 
 //[] spawn {
 //	while {true} do {
-//		if (vehicle player != player) then {
-//			hintSilent str (fullCrew [vehicle player,"cargo", missionNamespace getVar ["DEBUG",true]] + fullCrew [vehicle player,"turret", missionNamespace getVar ["DEBUG",true]]);
-//		};
-//	};
+//		hintSilent str (missionNamespace getVariable ["PLAYER_CARGO", []]);
+//	}
 //};
-
-[] spawn {
-	while {true} do {
-		hintSilent str (missionNamespace getVariable ["PLAYER_CARGO", []]);
-	}
-};
 
 progressEvaluator = {
 	//TODO: move progression conditions here and make message a global string variable
@@ -242,11 +229,12 @@ progressEvaluator = {
 				_progressMessage = "4. Fly to the waypoint and land";
 				if (vehicle player == player) then { MISSION_PROGRESS = 1; };
 				if (count (fullCrew PLAYER_VEHICLE) == 1) then { MISSION_PROGRESS = 5; };
+				if (((getPos PLAYER_VEHICLE) select 2) < 1) then { { moveOut _x} foreach PLAYER_CARGO; PLAYER_CARGO orderGetIn false; soldiers orderGetIn false; };
 			};
 			case 5: {
 				_progressMessage = "5. Fly back to spawn point and land";
 				if (vehicle player == player) then { MISSION_PROGRESS = 1; };
-				if (PLAYER_VEHICLE distance SPAWNPOINT < 100) then { MISSION_PROGRESS = 2; };
+				if (PLAYER_VEHICLE distance SPAWNPOINT < 100) then { MISSION_PROGRESS = 2; PLAYER_CARGO apply { deleteVehicle _x; }; PLAYER_CARGO = []; };
 			};
 		};
 		hintSilent _progressMessage;
@@ -285,19 +273,15 @@ soldierSimulator = {
 					_x doMove (_this call getNewSpawnPos);
 				};
 			} foreach soldiers;
-			(missionNamespace getVariable ["PLAYER_CARGO", []]) apply { doGetOut _x };
 			soldiers orderGetIn false;
 			sleep 1;
 		};
-		{
-			//_wp = (group _x) addWaypoint [vehicle player, 0];
-			//_wp setWaypointSpeed "FULL";
-			//_wp setWaypointType "GETIN";
-			(group _x) addVehicle PLAYER_VEHICLE;
-			_x assignAsCargo PLAYER_VEHICLE;
-		} foreach soldiers;
-		soldiers orderGetIn true;
 		while {missionNamespace getVar ["CHOPPER_NEAR", false]} do {
+			{
+				(group _x) addVehicle PLAYER_VEHICLE;
+				_x assignAsCargo PLAYER_VEHICLE;
+			} foreach soldiers;
+			soldiers orderGetIn true;
 			{
 				if (vehicle _x isEqualTo (missionNamespace getVar ["PLAYER_VEHICLE", objNull])) then {
 					PLAYER_CARGO pushBack _x;
