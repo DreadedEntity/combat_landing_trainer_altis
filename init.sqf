@@ -5,35 +5,6 @@
 #define getVar getVariable
 #define nsMission missionNamespace
 
-//player addAction ["Run Test", {
-//	_vehicle = vehicle player;
-//	_startTime = time;
-//	for "_i" from 0 to 1000000 do {
-//		_vehicle emptyPositions "cargo";
-//	};
-//	_endTime = time;
-//	systemChat format ["emptyPositions: %1", _endTime - _startTime];
-//	_startTime = time;
-//	for "_i" from 0 to 1000000 do {
-//		fullCrew [_vehicle, "cargo", true];
-//	};
-//	_endTime = time;
-//	systemChat format ["fullCrew(true): %1", _endTime - _startTime];
-//	_startTime = time;
-//	for "_i" from 0 to 1000000 do {
-//		fullCrew [_vehicle, "cargo", false];
-//	};
-//	_endTime = time;
-//	systemChat format ["fullCrew(false): %1", _endTime - _startTime];
-//}];
-//
-//ra1 addAction [ "On" , {
-//	_globalSoundSource = missionNamespace getVariable ["CURRENT_SOUND", objNull]; 
-//	if (!(_globalSoundSource isEqualTo objNull)) then { 
-//		deleteVehicle _globalSoundSource; 
-//	}; 
-//	[ra1, "Audioger", 50, 1] remoteExec ["playSoundGlobal", [0, -2] select isDedicated];
-//}];
 
 player addRating 9001;
 player addAction ["View my stats", {
@@ -48,15 +19,7 @@ player addAction ["View my stats", {
 		Soldiers killed
 	*/
 }, nil, 6, false, true];
-player addAction [
-	"Spawn Hummingbird",{
-		_heli = createVehicle ["B_Heli_Light_01_F", player modelToWorld [0,-500,0], [], 0, "FLY"];
-		_heli setDir direction player;
-		player moveInDriver _heli;
-		_heli setVelocityModelSpace [0,50,0];
-	},nil,1,false,true,"",
-	"missionNamespace getVariable ['PLAYER_HAS_TELEPORTED', false] && {_originalTarget == _target}"
-];
+
 player addAction ["Fix Heli",{
 	(vehicle player) setDamage 0;
 },nil,1,false,true,"",
@@ -167,38 +130,6 @@ goButtonCode = {
 	//SCRIPTS pushBack ([] spawn mainScript);
 	SCRIPTS pushBack ([] spawn progressEvaluator);
 };
-//mainScript = {
-//	//TODO: get progression conditions out of here
-//	MISSION_PROGRESS = missionNamespace getVar ["MISSION_PROGRESS",0];
-//	//Get a chopper
-//	
-//	waitUntil {MISSION_PROGRESS == 1};
-//	//Get in chopper
-//	
-//	
-//	//sleep 1;
-//	waitUntil {MISSION_PROGRESS == 2};
-//	//Wait for people to get in
-//	
-//	while {true} do {
-//		waitUntil {MISSION_PROGRESS == 3};
-//	
-//		waitUntil {MISSION_PROGRESS == 4};
-//		
-//		//Land at AO (calculate score)
-//		waitUntil {((getPosATL player) select 2) < 2};
-//		soldiers allowGetIn false;
-//		soldiers apply { moveOut _x; };
-//		
-//		waitUntil {MISSION_PROGRESS == 5};
-//	}
-//};
-
-//[] spawn {
-//	while {true} do {
-//		hintSilent str (missionNamespace getVariable ["PLAYER_CARGO", []]);
-//	}
-//};
 
 progressEvaluator = {
 	//TODO: move progression conditions here and make message a global string variable
@@ -332,33 +263,45 @@ _towns = [];
 player setPosATL [14648.7,16748.9,0];
 player setDir 326.641;
 
+//SPAWNGUY = createVehicle [etc]; //Fill this out later and change name of guy in editor to match
 spawnGuy allowDamage false;
 removeBackpack spawnGuy;
 spawnGuy addAction [
 	"Reset Selection", {
-		missionNamespace setVariable ["SELECTED_TOWN", ""];
-		missionNamespace setVariable ["SELECTED_SIDE", ""];
+		SELECTED_TOWN = "";
+		SELECTED_SIDE = "";
 	},_currentName,1,false,true,"",
 	"(missionNamespace getVariable ['SELECTED_TOWN','']) != ''"
 ];
 
 spawnGuy addAction [ "<t color='#00FF00'>GO</t>", goButtonCode, [_towns,_spawnList, _propList, _laptop], 6, false, true, "", "(missionNamespace getVariable ['SELECTED_TOWN','']) != '' && {(missionNamespace getVariable ['SELECTED_SIDE','']) != ''}"];
-	
+
+TOWN_ACTIONS = [];
 { //create town menu options
 	_currentName = getText (_x >> "name");
-	spawnGuy addAction [format ["Select %1", _currentName], {
-			missionNamespace setVariable ["SELECTED_TOWN", S(_this, 3)];
-			S(_this, 0) setUserActionText [S(_this, 2), format ["<t color='#FFFF00'>Select %1</t>", S(_this, 3)]];
-		},_currentName,1,false,false,"","(missionNamespace getVariable ['SELECTED_TOWN','']) == ''"
-	];
+	_newAction = spawnGuy addAction [format ["Select %1", _currentName], {
+		SELECTED_TOWN = S(_this, 3);
+		{
+			if (_this select 2 != _x) then {
+				_params = S(_this, 0) actionParams _x;
+				S(_this, 0) setUserActionText [_x, format ["Select %1 spawn", S(_params, 2)]];
+			};
+		} foreach TOWN_ACTIONS;
+		S(_this, 0) setUserActionText [S(_this, 2), format ["<t color='#FFFF00'>Select %1</t>", S(_this, 3)]];
+	},_currentName,1,false,false,"","(missionNamespace getVariable ['SELECTED_TOWN','']) == ''"];
+	TOWN_ACTIONS pushBack _newAction;
 } foreach _towns;
+SIDE_ACTIONS = [];
 { //create side menu options
-	_sideItem = _x;
-	spawnGuy addAction [format ["Select %1 spawn", _sideItem], {
-			missionNamespace setVariable ["SELECTED_SIDE", S(_this,3)];
-			S(_this, 0) setUserActionText [S(_this, 2), format ["<t color='#FFFF00'>Select %1 spawn</t>", S(_this, 3)]];
-		},_sideItem,1,false,false,"","(missionNamespace getVariable ['SELECTED_TOWN','']) != ''"
-	];
+	_newAction = spawnGuy addAction [format ["Select %1 spawn", _x], {
+		SELECTED_SIDE = S(_this,3);
+		{
+			if (_this select 2 != _x) then {
+				_params = S(_this, 0) actionParams _x;
+				S(_this, 0) setUserActionText [_x, format ["Select %1 spawn", S(_params, 2)]];
+			};
+		} foreach SIDE_ACTIONS;
+		S(_this, 0) setUserActionText [S(_this, 2), format ["<t color='#FFFF00'>Select %1 spawn</t>", S(_this, 3)]];
+	},_x,1,false,false,"","(missionNamespace getVariable ['SELECTED_TOWN','']) != ''"];
+	SIDE_ACTIONS pushBack _newAction;
 } foreach ["WEST","EAST","GUER"];
-
-//execVM "DE_diagnostic.sqf";
